@@ -1,0 +1,80 @@
+version: '3'
+networks:
+  frontend:
+    driver: ${NETWORKS_DRIVER}
+  backend:
+    driver: ${NETWORKS_DRIVER}
+  kong-net:
+    driver: ${NETWORKS_DRIVER}
+
+volumes:
+  mongo:
+    driver: ${VOLUMES_DRIVER}
+
+services:
+### Form.io ##############################################
+  formio:
+    build: ./Formio
+    env_file:
+      - ./.env
+    ports:
+      - '${FORMIO_PORT}:3001'
+    restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+    - mongo
+    restart: unless-stopped
+### MongoDB ##############################################
+  mongo:
+    build: ./MongoDB
+    ports:
+      - "${MONGO_PORT}:27017"
+    volumes:
+      - ${DATA_PATH_HOST}/mongo:/data/db
+    environment:
+      - "MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}"
+      - "MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}"
+      - "MONGO_INITDB_DATABASE=${MONGO_DB_NAME}"
+      - "MONGO_DB_USER=${MONGO_DB_USER}"
+      - "MONGO_DB_PASSWORD=${MONGO_DB_PASSWORD}"
+    networks:
+      - backend
+    restart: unless-stopped
+### MongoDB EXPORTER #######################################
+  mongo_exporter:
+    build: ./MongoDB/exporter
+    ports:
+      - "9104:9104"
+    environment:
+      - "MONGODB_URL=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017"
+    networks:
+      - backend
+    depends_on:
+      - mongo
+    command: "dockerize -wait http://api:80"
+    restart: unless-stopped
+### OpenCpu #############################################
+  opencpu:
+    build: ./OpenCpu
+    ports:
+      - "${OPENCPU_PORT_HTTPS}:443"
+      - "${OPENCPU_PORT_HTTP}:80"
+    networks:
+      - backend
+    restart: unless-stopped
+### Nginx #############################################
+    nginx:
+      image: 'bitnami/nginx:latest'
+      ports:
+        - '80:8080'
+      volumes:
+        - ${FAST_PATH}:/app
+### Node Worker #############################################
+      nodeworker:
+        build: ./NodeWorker
+        ports:
+          - "${OPENCPU_PORT_HTTP}:80"
+        networks:
+          - backend
+        restart: unless-stopped
