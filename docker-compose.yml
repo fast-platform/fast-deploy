@@ -1,12 +1,7 @@
 version: '3'
 networks:
-  frontend:
-    driver: ${NETWORKS_DRIVER}
   backend:
     driver: ${NETWORKS_DRIVER}
-  kong-net:
-    driver: ${NETWORKS_DRIVER}
-
 volumes:
   mongo:
     driver: ${VOLUMES_DRIVER}
@@ -64,17 +59,17 @@ services:
       - backend
     restart: unless-stopped
 ### Nginx #############################################
-    nginx:
-      image: 'bitnami/nginx:latest'
-      ports:
-        - '80:8080'
-      volumes:
-        - ${FAST_PATH}:/app
+  nginx:
+    image: 'bitnami/nginx:latest'
+    ports:
+      - '80:8080'
+    volumes:
+      - ${FAST_PATH}:/app
 ### Node Worker #############################################
-      nodeworker:
-        build: ./NodeWorker
-        ports:
-          - "${OPENCPU_PORT_HTTP}:80"
-        networks:
-          - backend
-        restart: unless-stopped
+  nodeworker:
+    build: ./NodeWorker
+    ports:
+      - "${OPENCPU_PORT_HTTP}:80"
+    networks:
+      - backend
+    restart: unless-stopped
